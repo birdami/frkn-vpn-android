@@ -1,0 +1,22 @@
+R_DEF: Internal format may change without notice
+local
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+drawable ic_vpn_key
+id btnConnect
+id ivStatus
+id tvServer
+id tvStatus
+layout activity_main
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string connect
+string connected
+string connecting
+string disconnect
+string disconnected
+string server_auto
+string status_desc
+style Theme.VPN
+xml network_security_config
