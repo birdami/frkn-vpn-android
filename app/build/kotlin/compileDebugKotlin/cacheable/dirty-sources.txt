@@ -1,5 +1,0 @@
-C:\Users\user\Desktop\frkn-vpn-android\app\src\main\java\com\vpn\app\service\VpnManager.kt
-C:\Users\user\Desktop\frkn-vpn-android\app\src\main\java\com\vpn\app\ui\MainActivity.kt
-C:\Users\user\Desktop\frkn-vpn-android\app\src\main\java\com\vpn\app\service\SingBoxConfig.kt
-C:\Users\user\Desktop\frkn-vpn-android\app\src\main\java\com\vpn\app\service\VpnTunnelService.kt
-C:\Users\user\Desktop\frkn-vpn-android\app\src\main\java\com\vpn\app\api\ApiClient.kt

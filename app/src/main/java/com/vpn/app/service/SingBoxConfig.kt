@@ -10,11 +10,11 @@ object SingBoxConfig {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
 
-    fun build(server: ServerConnection): String {
+    fun build(server: ServerConnection, cacheDir: String? = null): String {
         val config = mutableMapOf<String, Any>()
 
         // Log
-        config["log"] = mapOf("level" to "warn")
+        config["log"] = mapOf("level" to "info")
 
         // DNS
         config["dns"] = mapOf(
@@ -75,6 +75,22 @@ object SingBoxConfig {
                 mapOf("ip_is_private" to true, "outbound" to "direct"),
             ),
         )
+
+        // Experimental — cache file with explicit path (or disabled)
+        if (cacheDir != null) {
+            config["experimental"] = mapOf(
+                "cache_file" to mapOf(
+                    "enabled" to true,
+                    "path" to "$cacheDir/cache.db",
+                )
+            )
+        } else {
+            config["experimental"] = mapOf(
+                "cache_file" to mapOf(
+                    "enabled" to false,
+                )
+            )
+        }
 
         return gson.toJson(config)
     }
