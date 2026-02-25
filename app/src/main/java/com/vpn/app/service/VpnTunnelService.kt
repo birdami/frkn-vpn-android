@@ -1,6 +1,5 @@
 package com.vpn.app.service
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -15,19 +14,12 @@ import com.vpn.app.ui.MainActivity
 import io.nekohasekai.libbox.BoxService
 import io.nekohasekai.libbox.InterfaceUpdateListener
 import io.nekohasekai.libbox.Libbox
+import io.nekohasekai.libbox.NetworkInterfaceIterator
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
+import io.nekohasekai.libbox.WIFIState
 import java.io.File
 
-/**
- * VPN service powered by sing-box (libbox).
- *
- * Flow:
- * 1. MainActivity sends START intent with sing-box JSON config
- * 2. Service creates notification, builds TUN interface
- * 3. libbox handles Hysteria2 tunneling
- * 4. STOP intent tears everything down
- */
 class VpnTunnelService : VpnService(), PlatformInterface {
 
     companion object {
@@ -108,11 +100,9 @@ class VpnTunnelService : VpnService(), PlatformInterface {
         try {
             startForeground(NOTIFICATION_ID, buildNotification("Connecting..."))
 
-            // Write config to temp file (libbox reads from file)
             val configFile = File(filesDir, "config.json")
             configFile.writeText(config)
 
-            // Start sing-box
             val service = Libbox.newService(configFile.absolutePath, this)
             service.start()
             boxService = service
@@ -148,7 +138,9 @@ class VpnTunnelService : VpnService(), PlatformInterface {
         Log.i(TAG, "VPN stopped")
     }
 
-    // ─── PlatformInterface (libbox callbacks) ───────────────────────────
+    // ─── PlatformInterface ──────────────────────────────────────────────
+
+    override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
 
     override fun autoDetectInterfaceControl(fd: Int) {
         protect(fd)
@@ -156,59 +148,59 @@ class VpnTunnelService : VpnService(), PlatformInterface {
 
     override fun openTun(options: TunOptions): Int {
         val builder = Builder().apply {
-            // IPv4
             options.getInet4Address(0)?.let { addr ->
                 addAddress(addr, options.inet4AddressPrefixLength)
             }
-            // IPv6
             options.getInet6Address(0)?.let { addr ->
                 addAddress(addr, options.inet6AddressPrefixLength)
             }
-
-            // DNS
             for (i in 0 until options.dnsServerAddressCount) {
                 options.getDnsServerAddress(i)?.let { addDnsServer(it) }
             }
-
-            // Routes
             addRoute("0.0.0.0", 0)
             addRoute("::", 0)
-
-            // MTU
             setMtu(options.mtu)
-
             setSession("FRKN VPN")
             setBlocking(false)
         }
-
         tunFd = builder.establish()
         return tunFd?.fd ?: throw Exception("Failed to create TUN interface")
     }
 
+    override fun writeLog(message: String?) {
+        Log.d(TAG, message ?: "")
+    }
+
+    override fun sendNotification(notification: io.nekohasekai.libbox.Notification?) {
+        // libbox may send its own notifications; we ignore and use our own
+    }
+
     override fun useProcFS(): Boolean = false
 
-    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String, sourcePort: Int,
-                                      destinationAddress: String, destinationPort: Int): Int = -1
+    override fun findConnectionOwner(
+        ipProtocol: Int, sourceAddress: String?, sourcePort: Int,
+        destinationAddress: String?, destinationPort: Int
+    ): Int = -1
 
     override fun packageNameByUid(uid: Int): String = ""
 
-    override fun uidByPackageName(packageName: String): Int = -1
+    override fun uidByPackageName(packageName: String?): Int = -1
 
     override fun usePlatformDefaultInterfaceMonitor(): Boolean = false
 
-    override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {}
+    override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {}
 
-    override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener) {}
+    override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {}
 
     override fun usePlatformInterfaceGetter(): Boolean = false
 
-    override fun getInterfaces(): io.nekohasekai.libbox.NetworkInterfaceIterator? = null
+    override fun getInterfaces(): NetworkInterfaceIterator? = null
 
     override fun underNetworkExtension(): Boolean = false
 
     override fun includeAllNetworks(): Boolean = false
 
-    override fun readWIFIState(): io.nekohasekai.libbox.WIFIState? = null
+    override fun readWIFIState(): WIFIState? = null
 
     override fun clearDNSCache() {}
 
@@ -225,14 +217,14 @@ class VpnTunnelService : VpnService(), PlatformInterface {
         }
     }
 
-    private fun buildNotification(text: String): Notification {
+    private fun buildNotification(text: String): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java)
         val pending = PendingIntent.getActivity(
             this, 0, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        return Notification.Builder(this, CHANNEL_ID)
+        return android.app.Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("FRKN VPN")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_vpn_key)

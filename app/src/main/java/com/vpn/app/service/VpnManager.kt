@@ -3,12 +3,7 @@ package com.vpn.app.service
 import android.content.Context
 import android.provider.Settings
 import com.vpn.app.api.ApiClient
-import com.vpn.app.api.ServerConnection
 
-/**
- * Manages device registration, config fetching, and VPN lifecycle.
- * Stores token in SharedPreferences.
- */
 class VpnManager(private val context: Context) {
 
     private val api = ApiClient()
@@ -24,29 +19,19 @@ class VpnManager(private val context: Context) {
         get() = prefs.getString("referral_code", null)
         private set(value) = prefs.edit().putString("referral_code", value).apply()
 
-    /**
-     * Get unique device ID (Android ID).
-     */
     private fun getDeviceId(): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             ?: "unknown-${System.currentTimeMillis()}"
     }
 
-    /**
-     * Register device if needed, returns token.
-     */
     suspend fun ensureRegistered(): String {
         deviceToken?.let { return it }
-
         val response = api.register(getDeviceId())
         deviceToken = response.deviceToken
         referralCode = response.referralCode
         return response.deviceToken
     }
 
-    /**
-     * Fetch server config and connect to the first available server.
-     */
     suspend fun connect() {
         val token = ensureRegistered()
         val config = api.getConfig(token)
@@ -55,17 +40,12 @@ class VpnManager(private val context: Context) {
             throw Exception("No servers available")
         }
 
-        // Pick first server (MVP — single server)
         val server = config.servers.first()
         val singBoxJson = SingBoxConfig.build(server)
 
-        // Start VPN service
         VpnTunnelService.start(context, singBoxJson)
     }
 
-    /**
-     * Disconnect VPN.
-     */
     fun disconnect() {
         VpnTunnelService.stop(context)
     }
