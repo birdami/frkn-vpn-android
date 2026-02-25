@@ -76,7 +76,7 @@ jobs:
           path: app/libs/
 
       - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.13
+        run: gradle wrapper --gradle-version 9.1
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
