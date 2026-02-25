@@ -13,25 +13,38 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android NDK
-        run: sdkmanager "ndk;27.0.12077973"
+        run: sdkmanager "ndk;28.0.13004108"
 
-      - name: Clone sing-box
-        run: git clone --depth 1 https://github.com/SagerNet/sing-box.git
+      - name: Install gomobile
+        run: |
+          go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.4
+          go install github.com/sagernet/gomobile/cmd/gobind@v0.1.4
+
+      - name: Clone sing-box (stable release)
+        run: |
+          git clone --depth 1 --branch v1.11.11 https://github.com/SagerNet/sing-box.git
 
       - name: Build libbox.aar
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.0.13004108
         run: |
           cd sing-box
-          make lib_install
-          make lib_android
-          ls -lh *.aar
+          gomobile init
+          gomobile bind -v \
+            -androidapi 26 \
+            -javapkg=io.nekohasekai \
+            -tags "with_quic,with_utls,with_gvisor,with_wireguard,with_clash_api" \
+            -trimpath \
+            -ldflags "-s -w -X github.com/sagernet/sing-box/constant.Version=1.11.11" \
+            -o libbox.aar \
+            ./experimental/libbox
+          ls -lh libbox.aar
 
       - name: Upload libbox.aar
         uses: actions/upload-artifact@v4
